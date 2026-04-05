@@ -51,6 +51,13 @@ async function deezerGet<T>(path: string, params?: Record<string, string>) {
     const text = await res.text().catch(() => "");
     throw new Error(`Deezer API error (${res.status}): ${text || res.statusText}`);
   }
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Deezer proxy returned non-JSON (content-type: ${contentType}). Redeploy Vercel so /api/deezer routes to the serverless function. Body: ${text.slice(0, 120)}`,
+    );
+  }
   return (await res.json()) as T;
 }
 

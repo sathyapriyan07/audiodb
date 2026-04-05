@@ -19,6 +19,16 @@ Production-ready music exploration app built with **React + Vite + Tailwind**, b
   - `update public.profiles set is_admin = true where id = '<auth.uid>';`
 - Visit `/admin/login`
 
+## User features
+
+- Sign in at `/login` (Google OAuth + email magic link)
+- Library at `/library`:
+  - Favorites (songs/albums/artists)
+  - User playlists (separate from admin playlists)
+  - Recently played (recorded when you play previews)
+- 30s preview playback via `songs.preview_url` (Deezer import fills this automatically)
+- Optional lyrics via `songs.lyrics` (editable in Admin → Songs)
+
 ## Development
 
 ```bash
