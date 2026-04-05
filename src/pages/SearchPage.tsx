@@ -114,7 +114,11 @@ export default function SearchPage() {
                     key={a.id}
                     kind="album"
                     item={a}
-                    subtitle={a.artist?.name ?? "Album"}
+                    subtitle={
+                      a.album_artists?.[0]?.artist?.name ??
+                      a.artist?.name ??
+                      (a.album_artists?.length ? "Various artists" : "Album")
+                    }
                   />
                 ))}
               </div>
@@ -159,4 +163,3 @@ export default function SearchPage() {
     </div>
   );
 }
-

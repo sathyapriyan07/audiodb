@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Play } from "lucide-react";
@@ -41,6 +42,12 @@ export default function AlbumPage() {
   }
 
   const album = albumQuery.data as any;
+  const albumArtists = (album.album_artists ?? [])
+    .slice()
+    .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+    .map((aa: any) => aa.artist)
+    .filter(Boolean);
+  const displayArtists = albumArtists.length ? albumArtists : album.artist ? [album.artist] : [];
   const links = (linksQuery.data ?? []).map((l: any) => ({ url: l.url, platform: l.platform }));
   const songs = songsQuery.data ?? [];
 
@@ -56,10 +63,19 @@ export default function AlbumPage() {
           </div>
           <h1 className="mt-2 line-clamp-2 text-3xl font-semibold">{album.title}</h1>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[rgb(var(--muted))]">
-            {album.artist?.id ? (
-              <Link to={`/artists/${album.artist.id}`} className="underline">
-                {album.artist.name}
-              </Link>
+            {displayArtists.length ? (
+              <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                {displayArtists.map((a: any, idx: number) => (
+                  <React.Fragment key={a.id}>
+                    <Link to={`/artists/${a.id}`} className="underline">
+                      {a.name}
+                    </Link>
+                    {idx < displayArtists.length - 1 ? (
+                      <span className="text-[rgb(var(--muted))]">·</span>
+                    ) : null}
+                  </React.Fragment>
+                ))}
+              </span>
             ) : null}
             {album.release_date ? <span>{album.release_date}</span> : null}
             <span>{songs.length} tracks</span>

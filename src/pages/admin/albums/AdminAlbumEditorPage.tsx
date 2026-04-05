@@ -12,19 +12,27 @@ import { Label } from "@/components/ui/Label";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ImageField } from "@/components/admin/ImageField";
 import { StreamingLinksEditor } from "@/components/admin/StreamingLinksEditor";
+import { ArtistRolesEditor } from "@/components/admin/ArtistRolesEditor";
 
 import { listArtists } from "@/services/music/artists";
 import { listPlatforms } from "@/services/music/platforms";
-import { getAlbum, listAlbumStreamingLinks, setAlbumStreamingLinks, upsertAlbum } from "@/services/music/albums";
+import {
+  getAlbum,
+  listAlbumArtists,
+  listAlbumStreamingLinks,
+  setAlbumArtists,
+  setAlbumStreamingLinks,
+  upsertAlbum,
+} from "@/services/music/albums";
 import { queryClient } from "@/services/queryClient";
 import { toErrorMessage } from "@/services/db/errors";
 import type { ImageRef } from "@/types/media";
 
 const schema = z.object({
   title: z.string().min(1),
-  artist_id: z.string().uuid(),
   release_date: z.string().nullable().or(z.literal("")),
   cover_image: z.custom<ImageRef | null>(),
+  artists: z.array(z.object({ artist_id: z.string().uuid(), role: z.string().nullable().or(z.literal("")) })).min(1),
   streaming_links: z.array(
     z.object({
       platform_id: z.string().uuid(),
@@ -49,6 +57,12 @@ export default function AdminAlbumEditorPage() {
     queryFn: () => getAlbum(albumId!),
   });
 
+  const existingArtists = useQuery({
+    enabled: !isNew,
+    queryKey: ["albumArtists", albumId],
+    queryFn: () => listAlbumArtists(albumId!),
+  });
+
   const existingLinks = useQuery({
     enabled: !isNew,
     queryKey: ["albumLinks", albumId],
@@ -60,23 +74,36 @@ export default function AdminAlbumEditorPage() {
     values: existing.data
       ? {
           title: existing.data.title,
-          artist_id: existing.data.artist_id,
           release_date: existing.data.release_date ?? "",
           cover_image: existing.data.cover_image ?? null,
+          artists:
+            (existingArtists.data ?? []).length > 0
+              ? (existingArtists.data ?? []).map((a: any) => ({
+                  artist_id: a.artist_id,
+                  role: a.role ?? "",
+                }))
+              : existing.data.artist_id
+                ? [{ artist_id: existing.data.artist_id, role: "Primary" }]
+                : [],
           streaming_links: (existingLinks.data ?? []).map((l: any) => ({ platform_id: l.platform.id, url: l.url })),
         }
-      : { title: "", artist_id: "", release_date: "", cover_image: null, streaming_links: [] },
+      : { title: "", release_date: "", cover_image: null, artists: [], streaming_links: [] },
   });
 
   const save = useMutation({
     mutationFn: async (values: FormValues) => {
+      const primaryArtistId = values.artists[0]?.artist_id ?? null;
       const album = await upsertAlbum({
         id: isNew ? undefined : albumId,
         title: values.title,
-        artist_id: values.artist_id,
+        artist_id: primaryArtistId,
         release_date: values.release_date ? values.release_date : null,
         cover_image: (values.cover_image as any) ?? null,
       });
+      await setAlbumArtists(
+        album.id,
+        values.artists.map((a) => ({ artist_id: a.artist_id, role: a.role ? a.role : null })),
+      );
       await setAlbumStreamingLinks(album.id, values.streaming_links);
       return album;
     },
@@ -84,13 +111,17 @@ export default function AdminAlbumEditorPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["albums"] }),
         queryClient.invalidateQueries({ queryKey: ["album", data.id] }),
+        queryClient.invalidateQueries({ queryKey: ["albumArtists", data.id] }),
         queryClient.invalidateQueries({ queryKey: ["albumLinks", data.id] }),
       ]);
       navigate(`/admin/albums/${data.id}`, { replace: true });
     },
   });
 
-  const isLoading = (!isNew && existing.isLoading) || artistsQuery.isLoading || platformsQuery.isLoading;
+  const isLoading =
+    (!isNew && (existing.isLoading || existingArtists.isLoading || existingLinks.isLoading)) ||
+    artistsQuery.isLoading ||
+    platformsQuery.isLoading;
 
   return (
     <div>
@@ -110,22 +141,7 @@ export default function AdminAlbumEditorPage() {
                 <Label>Title</Label>
                 <Input {...form.register("title")} placeholder="Album title" />
               </div>
-              <div className="space-y-1.5">
-                <Label>Artist</Label>
-                <select
-                  className="focus-ring h-10 w-full rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-3 text-sm"
-                  {...form.register("artist_id")}
-                >
-                  <option value="" disabled>
-                    Select artist…
-                  </option>
-                  {(artistsQuery.data ?? []).map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -137,6 +153,16 @@ export default function AdminAlbumEditorPage() {
             </div>
 
             <ImageField control={form.control} name={"cover_image"} label="Cover image" folder="albums" />
+
+            <ArtistRolesEditor
+              control={form.control}
+              name={"artists"}
+              artists={artistsQuery.data ?? []}
+              label="Album artists"
+            />
+            {form.formState.errors.artists ? (
+              <div className="text-sm text-red-600">Add at least one artist.</div>
+            ) : null}
 
             <StreamingLinksEditor
               control={form.control}

@@ -95,20 +95,22 @@ export default function HomePage() {
         return (
           <RowSection key={section.id} title={section.title} subtitle={section.subtitle}>
             {entities.map((e: any) => (
-              <MediaCard
-                key={e.id}
-                kind={kind as any}
-                item={e}
-                subtitle={
-                  kind === "song"
-                    ? e.album?.artist?.name ?? e.album?.title ?? "Song"
+                <MediaCard
+                  key={e.id}
+                  kind={kind as any}
+                  item={e}
+                  subtitle={
+                    kind === "song"
+                      ? e.album?.artist?.name ?? e.album?.title ?? "Song"
                     : kind === "album"
-                      ? e.artist?.name ?? "Album"
+                      ? e.album_artists?.[0]?.artist?.name ??
+                        e.artist?.name ??
+                        (e.album_artists?.length ? "Various artists" : "Album")
                       : kind === "playlist"
                         ? "Playlist"
                         : "Artist"
-                }
-                className="w-40"
+                  }
+                  className="w-40"
               />
             ))}
           </RowSection>

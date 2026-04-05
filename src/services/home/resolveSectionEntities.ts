@@ -1,5 +1,6 @@
 import { supabase } from "@/services/supabase/client";
 import type { EntityType, HomeSection, HomeSectionItem } from "@/types/media";
+import { toOne } from "@/services/db/normalize";
 
 type EntityMap = Record<string, any>;
 
@@ -17,10 +18,17 @@ async function fetchByType(entityType: EntityType, ids: string[]) {
   if (entityType === "albums") {
     const { data, error } = await supabase
       .from("albums")
-      .select("id,title,cover_image,release_date,artist:artists(id,name,profile_image)")
+      .select(
+        "id,title,cover_image,release_date,artist:artists(id,name,profile_image),album_artists(album_id,artist_id,role,order,artist:artists(id,name,profile_image))",
+      )
       .in("id", ids);
     if (error) throw error;
-    return Object.fromEntries((data ?? []).map((r: any) => [r.id, r]));
+    const normalized = (data ?? []).map((r: any) => ({
+      ...r,
+      artist: toOne(r.artist),
+      album_artists: (r.album_artists ?? []).map((aa: any) => ({ ...aa, artist: toOne(aa.artist) })),
+    }));
+    return Object.fromEntries(normalized.map((r: any) => [r.id, r]));
   }
   if (entityType === "artists") {
     const { data, error } = await supabase
@@ -76,4 +84,3 @@ export async function resolveHomeSections(
     return { section, entities };
   });
 }
-

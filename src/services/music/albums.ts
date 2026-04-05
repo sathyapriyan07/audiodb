@@ -5,41 +5,54 @@ import { toOne } from "@/services/db/normalize";
 export type AlbumRow = {
   id: string;
   title: string;
-  artist_id: string;
+  artist_id: string | null;
   cover_image: ImageRef | null;
   release_date: string | null;
   created_at: string;
   updated_at: string;
   artist?: { id: string; name: string } | null;
+  album_artists?: Array<{ artist_id: string; role: string | null; order: number; artist: { id: string; name: string } }>;
 };
 
 export async function listAlbums(params?: { q?: string; limit?: number; offset?: number }) {
   const q = params?.q?.trim();
   let query = supabase
     .from("albums")
-    .select("id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists(id,name)")
+    .select(
+      "id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists(id,name),album_artists(album_id,artist_id,role,order,artist:artists(id,name))",
+    )
     .order("release_date", { ascending: false });
   if (q) query = query.ilike("title", `%${q}%`);
   if (params?.limit) query = query.range(params.offset ?? 0, (params.offset ?? 0) + params.limit - 1);
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map((r: any) => ({ ...r, artist: toOne(r.artist) })) as unknown as AlbumRow[];
+  return (data ?? []).map((r: any) => ({
+    ...r,
+    artist: toOne(r.artist),
+    album_artists: (r.album_artists ?? []).map((aa: any) => ({ ...aa, artist: toOne(aa.artist) })),
+  })) as unknown as AlbumRow[];
 }
 
 export async function getAlbum(albumId: string) {
   const { data, error } = await supabase
     .from("albums")
-    .select("id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists(id,name,profile_image)")
+    .select(
+      "id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists(id,name,profile_image),album_artists(album_id,artist_id,role,order,artist:artists(id,name,profile_image))",
+    )
     .eq("id", albumId)
     .single();
   if (error) throw error;
-  return { ...(data as any), artist: toOne((data as any).artist) } as any;
+  return {
+    ...(data as any),
+    artist: toOne((data as any).artist),
+    album_artists: ((data as any).album_artists ?? []).map((aa: any) => ({ ...aa, artist: toOne(aa.artist) })),
+  } as any;
 }
 
 export async function upsertAlbum(values: {
   id?: string;
   title: string;
-  artist_id: string;
+  artist_id: string | null;
   cover_image: ImageRef | null;
   release_date: string | null;
 }) {
@@ -54,6 +67,34 @@ export async function upsertAlbum(values: {
 
 export async function deleteAlbum(albumId: string) {
   const { error } = await supabase.from("albums").delete().eq("id", albumId);
+  if (error) throw error;
+}
+
+export async function listAlbumArtists(albumId: string) {
+  const { data, error } = await supabase
+    .from("album_artists")
+    .select("artist_id,role,order,artist:artists(id,name,profile_image)")
+    .eq("album_id", albumId)
+    .order("order", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({ ...r, artist: toOne(r.artist) })) as Array<{
+    artist_id: string;
+    role: string | null;
+    order: number;
+    artist: { id: string; name: string; profile_image: ImageRef | null };
+  }>;
+}
+
+export async function setAlbumArtists(
+  albumId: string,
+  items: Array<{ artist_id: string; role: string | null }>,
+) {
+  const { error: delErr } = await supabase.from("album_artists").delete().eq("album_id", albumId);
+  if (delErr) throw delErr;
+  if (!items.length) return;
+  const { error } = await supabase.from("album_artists").insert(
+    items.map((i, idx) => ({ album_id: albumId, artist_id: i.artist_id, role: i.role, order: idx })),
+  );
   if (error) throw error;
 }
 

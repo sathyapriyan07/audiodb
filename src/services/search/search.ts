@@ -1,8 +1,15 @@
 import { supabase } from "@/services/supabase/client";
+import { toOne } from "@/services/db/normalize";
 
 export type SearchResults = {
   songs: Array<{ id: string; title: string; cover_image: any; album?: { id: string; title: string } | null }>;
-  albums: Array<{ id: string; title: string; cover_image: any; artist?: { id: string; name: string } | null }>;
+  albums: Array<{
+    id: string;
+    title: string;
+    cover_image: any;
+    album_artists?: Array<{ artist: { id: string; name: string } }>;
+    artist?: { id: string; name: string } | null;
+  }>;
   artists: Array<{ id: string; name: string; profile_image: any }>;
   playlists: Array<{ id: string; title: string; cover_image: any }>;
 };
@@ -19,7 +26,7 @@ export async function searchAll(qRaw: string, limit = 8): Promise<SearchResults>
       .limit(limit),
     supabase
       .from("albums")
-      .select("id,title,cover_image,artist:artists(id,name)")
+      .select("id,title,cover_image,artist:artists(id,name),album_artists(artist:artists(id,name))")
       .ilike("title", `%${q}%`)
       .limit(limit),
     supabase.from("artists").select("id,name,profile_image").ilike("name", `%${q}%`).limit(limit),
@@ -37,9 +44,12 @@ export async function searchAll(qRaw: string, limit = 8): Promise<SearchResults>
 
   return {
     songs: (songs.data ?? []) as any,
-    albums: (albums.data ?? []) as any,
+    albums: (albums.data ?? []).map((a: any) => ({
+      ...a,
+      artist: toOne(a.artist),
+      album_artists: (a.album_artists ?? []).map((aa: any) => ({ ...aa, artist: toOne(aa.artist) })),
+    })) as any,
     artists: (artists.data ?? []) as any,
     playlists: (playlists.data ?? []) as any,
   };
 }
-

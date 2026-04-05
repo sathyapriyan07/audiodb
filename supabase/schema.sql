@@ -78,12 +78,26 @@ create index if not exists artists_name_trgm on public.artists using gin (name g
 create table if not exists public.albums (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  artist_id uuid not null references public.artists(id) on delete cascade,
+  -- Kept for backward compatibility / “primary artist” (optional). For multi-artist, use `album_artists`.
+  artist_id uuid references public.artists(id) on delete set null,
   cover_image jsonb,
   release_date date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- If the project was created with an older version where `albums.artist_id` was NOT NULL,
+-- drop the NOT NULL constraint (best-effort).
+do $$
+begin
+  begin
+    alter table public.albums alter column artist_id drop not null;
+  exception when undefined_column then
+    -- ignore
+  when insufficient_privilege then
+    raise notice 'Skipping alter albums.artist_id (insufficient_privilege).';
+  end;
+end $$;
 
 create trigger albums_set_updated_at
 before update on public.albums
@@ -91,6 +105,18 @@ for each row execute function public.set_updated_at();
 
 create index if not exists albums_title_trgm on public.albums using gin (title gin_trgm_ops);
 create index if not exists albums_artist_id_idx on public.albums (artist_id);
+
+create table if not exists public.album_artists (
+  album_id uuid not null references public.albums(id) on delete cascade,
+  artist_id uuid not null references public.artists(id) on delete cascade,
+  role text,
+  "order" integer not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (album_id, artist_id)
+);
+
+create index if not exists album_artists_artist_id_idx on public.album_artists (artist_id);
+create unique index if not exists album_artists_order_unique on public.album_artists (album_id, "order");
 
 create table if not exists public.songs (
   id uuid primary key default gen_random_uuid(),
@@ -249,7 +275,7 @@ declare
 begin
   foreach t in array array[
     'artists','albums','songs','playlists','platforms',
-    'song_artists','song_streaming_links','album_streaming_links','playlist_songs',
+    'song_artists','album_artists','song_streaming_links','album_streaming_links','playlist_songs',
     'home_sections','home_section_items'
   ]
   loop
