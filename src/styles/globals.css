@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 255 255 255;
+    --fg: 17 24 39;
+    --muted: 107 114 128;
+    --card: 255 255 255;
+    --border: 229 231 235;
+    --accent: 99 102 241;
+    --accent-2: 236 72 153;
+    --ring: 99 102 241;
+  }
+
+  .dark {
+    --bg: 3 7 18;
+    --fg: 226 232 240;
+    --muted: 148 163 184;
+    --card: 15 23 42;
+    --border: 51 65 85;
+    --accent: 129 140 248;
+    --accent-2: 244 114 182;
+    --ring: 129 140 248;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-[rgb(var(--bg))] text-[rgb(var(--fg))] antialiased font-sans;
+  }
+
+  * {
+    @apply border-[rgb(var(--border))];
+  }
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-7xl px-4 md:px-6;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[rgb(var(--bg))];
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
