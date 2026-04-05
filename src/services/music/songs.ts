@@ -9,6 +9,8 @@ export type SongRow = {
   release_date: string | null;
   album_id: string | null;
   cover_image: ImageRef | null;
+  preview_url?: string | null;
+  lyrics?: string | null;
   created_at: string;
   updated_at: string;
   album?: { id: string; title: string } | null;
@@ -30,7 +32,9 @@ export async function listSongs(params?: { q?: string; limit?: number; offset?: 
   const q = params?.q?.trim();
   let query = supabase
     .from("songs")
-    .select("id,title,duration,release_date,album_id,cover_image,created_at,updated_at,album:albums(id,title)")
+    .select(
+      "id,title,duration,release_date,album_id,cover_image,preview_url,lyrics,created_at,updated_at,album:albums(id,title)",
+    )
     .order("release_date", { ascending: false });
   if (q) query = query.ilike("title", `%${q}%`);
   if (params?.limit) query = query.range(params.offset ?? 0, (params.offset ?? 0) + params.limit - 1);
@@ -43,7 +47,7 @@ export async function getSong(songId: string) {
   const { data, error } = await supabase
     .from("songs")
     .select(
-      "id,title,duration,release_date,album_id,cover_image,created_at,updated_at,album:albums(id,title,cover_image,release_date,artist:artists!albums_artist_id_fkey(id,name,profile_image))",
+      "id,title,duration,release_date,album_id,cover_image,preview_url,lyrics,created_at,updated_at,album:albums(id,title,cover_image,release_date,artist:artists!albums_artist_id_fkey(id,name,profile_image))",
     )
     .eq("id", songId)
     .single();
@@ -123,11 +127,13 @@ export async function upsertSong(values: {
   release_date: string | null;
   album_id: string | null;
   cover_image: ImageRef | null;
+  preview_url?: string | null;
+  lyrics?: string | null;
 }) {
   const { data, error } = await supabase
     .from("songs")
     .upsert(values, { onConflict: "id" })
-    .select("id,title,duration,release_date,album_id,cover_image,created_at,updated_at")
+    .select("id,title,duration,release_date,album_id,cover_image,preview_url,lyrics,created_at,updated_at")
     .single();
   if (error) throw error;
   return data as SongRow;

@@ -6,6 +6,7 @@ import { useTheme } from "@/services/theme/ThemeProvider";
 import { useAuth } from "@/services/auth/AuthProvider";
 import { Button } from "@/components/ui/Button";
 import { signOut } from "@/services/auth/auth";
+import { MiniPlayer } from "@/components/player/MiniPlayer";
 
 function Logo() {
   return (
@@ -64,6 +65,20 @@ function SidebarNav() {
             <Search className="h-4 w-4" />
             Search
           </NavLink>
+          <NavLink
+            to="/library"
+            className={({ isActive }) =>
+              cn(
+                "focus-ring mb-1 inline-flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium",
+                isActive
+                  ? "bg-black/5 text-[rgb(var(--fg))] dark:bg-white/5"
+                  : "text-[rgb(var(--muted))] hover:bg-black/5 hover:text-[rgb(var(--fg))] dark:hover:bg-white/5",
+              )
+            }
+          >
+            <Music2 className="h-4 w-4" />
+            Library
+          </NavLink>
           {isAdmin ? (
             <NavLink
               to="/admin"
@@ -103,7 +118,7 @@ function SidebarNav() {
 
 function MobileTopBar() {
   const { mode, setMode } = useTheme();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   return (
     <header className="sticky top-0 z-30 border-b border-[rgb(var(--border))] bg-[rgb(var(--bg))]/70 backdrop-blur lg:hidden">
       <div className="flex h-14 items-center justify-between px-4">
@@ -126,9 +141,60 @@ function MobileTopBar() {
           >
             <SunMoon className="h-4 w-4" />
           </Button>
+          {!user ? (
+            <Link
+              to="/login"
+              className="focus-ring rounded-xl px-3 py-2 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]"
+            >
+              Sign in
+            </Link>
+          ) : null}
         </div>
       </div>
     </header>
+  );
+}
+
+function DesktopTopBar() {
+  const { mode, setMode } = useTheme();
+  const { user, isAdmin } = useAuth();
+  return (
+    <div className="sticky top-0 z-20 hidden border-b border-[rgb(var(--border))] bg-[rgb(var(--bg))]/65 backdrop-blur lg:block">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-6 py-4">
+        <div className="text-sm font-semibold">Listen now</div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/search"
+            className="focus-ring rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-4 py-2 text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]"
+          >
+            Search…
+          </Link>
+          {isAdmin ? (
+            <Link
+              to="/admin"
+              className="focus-ring rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-4 py-2 text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--fg))]"
+            >
+              Admin
+            </Link>
+          ) : null}
+          <Button variant="ghost" size="sm" onClick={() => setMode(mode === "dark" ? "light" : "dark")}>
+            <SunMoon className="h-4 w-4" />
+          </Button>
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={() => signOut()}>
+              Sign out
+            </Button>
+          ) : (
+            <Link
+              to="/login"
+              className="focus-ring rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-4 py-2 text-sm font-medium"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -137,7 +203,7 @@ function MobileTabBar() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 lg:hidden">
       <div className="pointer-events-auto mx-auto max-w-2xl px-3 pb-3">
         <div className="rounded-3xl border border-[rgb(var(--border))] bg-[rgb(var(--bg))]/70 p-2 shadow-xl backdrop-blur">
-          <nav className="grid grid-cols-2 gap-1">
+          <nav className="grid grid-cols-3 gap-1">
             <NavLink
               to="/"
               end
@@ -167,6 +233,20 @@ function MobileTabBar() {
               <Search className="h-4 w-4" />
               Search
             </NavLink>
+            <NavLink
+              to="/library"
+              className={({ isActive }) =>
+                cn(
+                  "focus-ring inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium",
+                  isActive
+                    ? "bg-black/5 text-[rgb(var(--fg))] dark:bg-white/5"
+                    : "text-[rgb(var(--muted))] hover:bg-black/5 hover:text-[rgb(var(--fg))] dark:hover:bg-white/5",
+                )
+              }
+            >
+              <Music2 className="h-4 w-4" />
+              Library
+            </NavLink>
           </nav>
         </div>
       </div>
@@ -182,11 +262,13 @@ export function AppLayout() {
         <SidebarNav />
         <div className="min-w-0 flex-1">
           <MobileTopBar />
+          <DesktopTopBar />
           <main className="mx-auto w-full max-w-[1400px] px-4 pb-24 pt-6 md:px-6 lg:px-10 lg:pb-10 lg:pt-10">
             <Outlet />
           </main>
         </div>
       </div>
+      <MiniPlayer />
       <MobileTabBar />
     </div>
   );

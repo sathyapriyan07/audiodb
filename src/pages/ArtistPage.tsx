@@ -1,15 +1,20 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Play } from "lucide-react";
 
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ResolvedImage } from "@/components/ResolvedImage";
 import { MediaCard } from "@/components/MediaCard";
-import { getArtist, listArtistAlbums, listArtistTopSongs } from "@/services/music/artists";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { getArtist, listArtistAlbums, listArtistTopSongs, listSimilarArtists } from "@/services/music/artists";
+import { usePlayer } from "@/store/player/PlayerProvider";
 
 export default function ArtistPage() {
   const { artistId } = useParams();
   if (!artistId) return null;
+  const player = usePlayer();
 
   const artistQuery = useQuery({ queryKey: ["artist", artistId], queryFn: () => getArtist(artistId) });
   const albumsQuery = useQuery({
@@ -21,6 +26,11 @@ export default function ArtistPage() {
     enabled: Boolean(artistId),
     queryKey: ["artistTopSongs", artistId],
     queryFn: () => listArtistTopSongs(artistId, 12),
+  });
+  const similarQuery = useQuery({
+    enabled: Boolean(artistId),
+    queryKey: ["similarArtists", artistId],
+    queryFn: () => listSimilarArtists(artistId, 12),
   });
 
   if (artistQuery.isLoading) return <Skeleton className="h-64 w-full rounded-3xl" />;
@@ -49,6 +59,9 @@ export default function ArtistPage() {
             <div className="text-xs font-semibold uppercase tracking-wider text-white/70">Artist</div>
             <h1 className="mt-2 text-3xl font-semibold text-white md:text-4xl">{artist.name}</h1>
             {artist.bio ? <p className="mt-3 max-w-2xl text-sm text-white/70">{artist.bio}</p> : null}
+            <div className="mt-5">
+              <FavoriteButton entityType="artists" entityId={artist.id} />
+            </div>
           </div>
         </div>
       </div>
@@ -67,6 +80,19 @@ export default function ArtistPage() {
                     <div className="line-clamp-1 text-sm font-semibold">{s.title}</div>
                     <div className="mt-0.5 text-xs text-[rgb(var(--muted))]">{s.album?.title ?? "Song"}</div>
                   </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      player.playSongId(s.id);
+                    }}
+                    disabled={!s.preview_url}
+                    aria-label="Play preview"
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
                 </Card>
               </Link>
             ))}
@@ -80,6 +106,17 @@ export default function ArtistPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {albumsQuery.data.map((a: any) => (
               <MediaCard key={a.id} kind="album" item={a} subtitle={a.release_date ?? "Album"} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {similarQuery.data?.length ? (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Similar artists</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {similarQuery.data.map((a: any) => (
+              <MediaCard key={a.id} kind="artist" item={a} subtitle="Similar" />
             ))}
           </div>
         </section>

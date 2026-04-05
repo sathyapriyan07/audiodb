@@ -140,6 +140,7 @@ async function getOrCreateSongByDeezer(params: {
     release_date: params.releaseDateOverride ?? null,
     album_id: params.albumId,
     cover_image: urlImage(coverUrl),
+    preview_url: params.deezerTrack.preview ?? null,
   });
 
   await setSongArtists(
@@ -282,6 +283,7 @@ export async function importDeezerAlbum(params: {
         id: t.id,
         title: t.title,
         duration: t.duration,
+        preview: t.preview,
         link: t.link,
         artist: toOne(t.artist) ?? params.albumDetails.artist,
         contributors: t.contributors ?? params.albumDetails.contributors,

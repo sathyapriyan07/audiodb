@@ -37,7 +37,7 @@ export async function listPlaylistSongs(playlistId: string) {
   const { data, error } = await supabase
     .from("playlist_songs")
     .select(
-      "song_id,order,song:songs(id,title,cover_image,album:albums(id,title,artist:artists!albums_artist_id_fkey(id,name)))",
+      "song_id,order,song:songs(id,title,cover_image,preview_url,album:albums(id,title,artist:artists!albums_artist_id_fkey(id,name)))",
     )
     .eq("playlist_id", playlistId)
     .order("order", { ascending: true });

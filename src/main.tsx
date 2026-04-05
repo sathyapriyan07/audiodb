@@ -7,6 +7,7 @@ import { router } from "@/routes/router";
 import { queryClient } from "@/services/queryClient";
 import { AuthProvider } from "@/services/auth/AuthProvider";
 import { ThemeProvider } from "@/services/theme/ThemeProvider";
+import { PlayerProvider } from "@/store/player/PlayerProvider";
 
 import "@/styles/globals.css";
 
@@ -15,7 +16,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
+          <PlayerProvider>
+            <RouterProvider router={router} />
+          </PlayerProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

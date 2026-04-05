@@ -7,12 +7,14 @@ import { RequireAdmin } from "@/routes/guards";
 
 const HomePage = React.lazy(() => import("@/pages/HomePage"));
 const SearchPage = React.lazy(() => import("@/pages/SearchPage"));
+const LibraryPage = React.lazy(() => import("@/pages/LibraryPage"));
 const SongPage = React.lazy(() => import("@/pages/SongPage"));
 const AlbumPage = React.lazy(() => import("@/pages/AlbumPage"));
 const ArtistPage = React.lazy(() => import("@/pages/ArtistPage"));
 const PlaylistPage = React.lazy(() => import("@/pages/PlaylistPage"));
 const NotFoundPage = React.lazy(() => import("@/pages/NotFoundPage"));
 const ErrorPage = React.lazy(() => import("@/pages/ErrorPage"));
+const LoginPage = React.lazy(() => import("@/pages/LoginPage"));
 
 const AdminLoginPage = React.lazy(() => import("@/pages/admin/AdminLoginPage"));
 const AdminDashboardPage = React.lazy(() => import("@/pages/admin/AdminDashboardPage"));
@@ -67,6 +69,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "library",
+        element: (
+          <React.Suspense>
+            <LibraryPage />
+          </React.Suspense>
+        ),
+      },
+      {
         path: "songs/:songId",
         element: (
           <React.Suspense>
@@ -107,6 +117,14 @@ export const router = createBrowserRouter([
         ),
       },
     ],
+  },
+  {
+    path: "/login",
+    element: (
+      <React.Suspense>
+        <LoginPage />
+      </React.Suspense>
+    ),
   },
   {
     path: "/admin/login",

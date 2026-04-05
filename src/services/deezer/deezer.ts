@@ -24,6 +24,7 @@ const DeezerTrackSchema = z.object({
   id: z.number(),
   title: z.string(),
   duration: z.number().int().nullable().optional(),
+  preview: z.string().url().nullable().optional(),
   link: z.string().optional(),
   artist: DeezerArtistSchema,
   contributors: z.array(DeezerArtistSchema).optional(),
@@ -86,4 +87,3 @@ export async function getDeezerArtist(id: number) {
   const json = await deezerGet<any>(`artist/${id}`);
   return json as any;
 }
-

@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { Textarea } from "@/components/ui/Textarea";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ImageField } from "@/components/admin/ImageField";
 import { ArtistRolesEditor } from "@/components/admin/ArtistRolesEditor";
@@ -37,6 +38,8 @@ const schema = z.object({
   release_date: z.string().nullable().or(z.literal("")),
   album_id: z.string().uuid().nullable().or(z.literal("")),
   cover_image: z.custom<ImageRef | null>(),
+  preview_url: z.string().url().nullable().or(z.literal("")),
+  lyrics: z.string().nullable().or(z.literal("")),
   artists: z.array(z.object({ artist_id: z.string().uuid(), role: z.string().nullable().or(z.literal("")) })),
   streaming_links: z.array(z.object({ platform_id: z.string().uuid(), url: z.string().url() })),
 });
@@ -79,6 +82,8 @@ export default function AdminSongEditorPage() {
           release_date: existing.data.release_date ?? "",
           album_id: existing.data.album_id ?? "",
           cover_image: existing.data.cover_image ?? null,
+          preview_url: existing.data.preview_url ?? "",
+          lyrics: existing.data.lyrics ?? "",
           artists: (existingArtists.data ?? []).map((a: any) => ({
             artist_id: a.artist_id,
             role: a.role ?? "",
@@ -91,6 +96,8 @@ export default function AdminSongEditorPage() {
           release_date: "",
           album_id: "",
           cover_image: null,
+          preview_url: "",
+          lyrics: "",
           artists: [],
           streaming_links: [],
         },
@@ -105,6 +112,8 @@ export default function AdminSongEditorPage() {
         release_date: values.release_date ? values.release_date : null,
         album_id: values.album_id ? values.album_id : null,
         cover_image: (values.cover_image as any) ?? null,
+        preview_url: values.preview_url ? values.preview_url : null,
+        lyrics: values.lyrics ? values.lyrics : null,
       });
       await setSongArtists(
         song.id,
@@ -181,6 +190,19 @@ export default function AdminSongEditorPage() {
             </div>
 
             <ImageField control={form.control} name={"cover_image"} label="Cover image" folder="songs" />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label hint="Deezer 30s MP3 URL">Preview URL</Label>
+                <Input {...form.register("preview_url")} placeholder="https://…/preview.mp3" />
+              </div>
+              <div />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label hint="Optional">Lyrics</Label>
+              <Textarea {...form.register("lyrics")} placeholder="Paste lyrics…" />
+            </div>
 
             <ArtistRolesEditor control={form.control} name={"artists"} artists={artistsQuery.data ?? []} />
 

@@ -3,13 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Play } from "lucide-react";
 
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ResolvedImage } from "@/components/ResolvedImage";
 import { getPlaylist, listPlaylistSongs } from "@/services/music/playlists";
+import { usePlayer } from "@/store/player/PlayerProvider";
 
 export default function PlaylistPage() {
   const { playlistId } = useParams();
   if (!playlistId) return null;
+  const player = usePlayer();
 
   const playlistQuery = useQuery({
     queryKey: ["playlist", playlistId],
@@ -73,7 +76,19 @@ export default function PlaylistPage() {
                     </div>
                   </div>
                   <span className="grid h-9 w-9 place-items-center rounded-xl border border-[rgb(var(--border))]">
-                    <Play className="h-4 w-4" />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        player.playSongId(r.song.id);
+                      }}
+                      disabled={!r.song.preview_url}
+                      aria-label="Play preview"
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
                   </span>
                 </Card>
               </Link>

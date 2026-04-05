@@ -68,7 +68,7 @@ export async function listArtistAlbums(artistId: string) {
 export async function listArtistTopSongs(artistId: string, limit = 10) {
   const { data, error } = await supabase
     .from("song_artists")
-    .select("song:songs(id,title,cover_image,album:albums(id,title))")
+    .select("song:songs(id,title,cover_image,preview_url,album:albums(id,title))")
     .eq("artist_id", artistId)
     .limit(limit);
   if (error) throw error;
@@ -76,6 +76,47 @@ export async function listArtistTopSongs(artistId: string, limit = 10) {
     id: string;
     title: string;
     cover_image: ImageRef | null;
+    preview_url: string | null;
     album: { id: string; title: string } | null;
   }>;
+}
+
+export async function listSimilarArtists(artistId: string, limit = 10) {
+  const { data: albumRows, error: e1 } = await supabase
+    .from("album_artists")
+    .select("album_id")
+    .eq("artist_id", artistId)
+    .limit(200);
+  if (e1) throw e1;
+  const albumIds = Array.from(new Set((albumRows ?? []).map((r: any) => r.album_id).filter(Boolean)));
+  if (!albumIds.length) return [];
+
+  const { data: aaRows, error: e2 } = await supabase
+    .from("album_artists")
+    .select("artist_id")
+    .in("album_id", albumIds)
+    .neq("artist_id", artistId)
+    .limit(500);
+  if (e2) throw e2;
+
+  const counts = new Map<string, number>();
+  for (const r of aaRows ?? []) {
+    const id = (r as any).artist_id as string;
+    if (!id) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  const ranked = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([id]) => id);
+
+  if (!ranked.length) return [];
+  const { data: artists, error: e3 } = await supabase
+    .from("artists")
+    .select("id,name,profile_image,bio")
+    .in("id", ranked);
+  if (e3) throw e3;
+
+  const map = new Map((artists ?? []).map((a: any) => [a.id, a]));
+  return ranked.map((id) => map.get(id)).filter(Boolean);
 }

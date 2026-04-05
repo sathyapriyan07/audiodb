@@ -1,14 +1,17 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Play, Clock3 } from "lucide-react";
+import { Clock3, Play, Share2 } from "lucide-react";
 
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ResolvedImage } from "@/components/ResolvedImage";
 import { StreamingButtons } from "@/components/StreamingButtons";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { listSongArtists, listSongStreamingLinks, getSong } from "@/services/music/songs";
 import { listAlbumSongs } from "@/services/music/albums";
+import { usePlayer } from "@/store/player/PlayerProvider";
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return null;
@@ -20,6 +23,7 @@ function formatDuration(seconds: number | null) {
 export default function SongPage() {
   const { songId } = useParams();
   if (!songId) return null;
+  const player = usePlayer();
 
   const songQuery = useQuery({ queryKey: ["song", songId], queryFn: () => getSong(songId) });
   const artistsQuery = useQuery({
@@ -94,8 +98,49 @@ export default function SongPage() {
           <div className="mt-5">
             <StreamingButtons links={links} />
           </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => player.playSongId(song.id)}
+              disabled={!song.preview_url}
+              title={song.preview_url ? "Play 30s preview" : "No preview URL"}
+            >
+              <Play className="h-4 w-4" />
+              Play preview
+            </Button>
+            <FavoriteButton entityType="songs" entityId={song.id} />
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={async () => {
+                const url = window.location.href;
+                const nav: any = navigator;
+                try {
+                  if (nav.share) await nav.share({ title: song.title, url });
+                  else if (nav.clipboard?.writeText) await nav.clipboard.writeText(url);
+                  else alert(url);
+                } catch {
+                  if (nav.clipboard?.writeText) await nav.clipboard.writeText(url);
+                  else alert(url);
+                }
+              }}
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+          </div>
         </div>
       </div>
+
+      {song.lyrics ? (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Lyrics</h2>
+          <Card className="p-5">
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed text-[rgb(var(--fg))]">{song.lyrics}</pre>
+          </Card>
+        </section>
+      ) : null}
 
       {related.length ? (
         <section className="space-y-3">
@@ -123,4 +168,3 @@ export default function SongPage() {
     </div>
   );
 }
-

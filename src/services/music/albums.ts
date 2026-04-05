@@ -127,7 +127,7 @@ export async function setAlbumStreamingLinks(
 export async function listAlbumSongs(albumId: string) {
   const { data, error } = await supabase
     .from("songs")
-    .select("id,title,duration,release_date,cover_image")
+    .select("id,title,duration,release_date,cover_image,preview_url")
     .eq("album_id", albumId)
     .order("release_date", { ascending: true })
     .order("title", { ascending: true });
@@ -138,5 +138,6 @@ export async function listAlbumSongs(albumId: string) {
     duration: number | null;
     release_date: string | null;
     cover_image: ImageRef | null;
+    preview_url: string | null;
   }>;
 }

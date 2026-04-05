@@ -125,6 +125,8 @@ create table if not exists public.songs (
   release_date date,
   album_id uuid references public.albums(id) on delete set null,
   cover_image jsonb,
+  preview_url text,
+  lyrics text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -132,6 +134,10 @@ create table if not exists public.songs (
 create trigger songs_set_updated_at
 before update on public.songs
 for each row execute function public.set_updated_at();
+
+-- Best-effort: add new columns when migrating older installs
+alter table public.songs add column if not exists preview_url text;
+alter table public.songs add column if not exists lyrics text;
 
 create index if not exists songs_title_trgm on public.songs using gin (title gin_trgm_ops);
 create index if not exists songs_album_id_idx on public.songs (album_id);
@@ -267,6 +273,95 @@ alter table public.playlist_songs enable row level security;
 alter table public.home_sections enable row level security;
 alter table public.home_section_items enable row level security;
 alter table public.external_entity_links enable row level security;
+
+-- User features (Auth required)
+create table if not exists public.user_favorites (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  entity_type public.entity_type not null,
+  entity_id uuid not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, entity_type, entity_id)
+);
+
+create table if not exists public.user_play_history (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  song_id uuid not null references public.songs(id) on delete cascade,
+  played_at timestamptz not null default now()
+);
+
+create index if not exists user_play_history_user_id_idx on public.user_play_history (user_id, played_at desc);
+
+create table if not exists public.user_playlists (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  description text,
+  cover_image jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create trigger user_playlists_set_updated_at
+before update on public.user_playlists
+for each row execute function public.set_updated_at();
+
+create table if not exists public.user_playlist_songs (
+  playlist_id uuid not null references public.user_playlists(id) on delete cascade,
+  song_id uuid not null references public.songs(id) on delete cascade,
+  "order" integer not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (playlist_id, song_id)
+);
+
+create unique index if not exists user_playlist_songs_order_unique on public.user_playlist_songs (playlist_id, "order");
+
+alter table public.user_favorites enable row level security;
+alter table public.user_play_history enable row level security;
+alter table public.user_playlists enable row level security;
+alter table public.user_playlist_songs enable row level security;
+
+drop policy if exists "favorites own" on public.user_favorites;
+create policy "favorites own"
+on public.user_favorites
+for all
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "history own" on public.user_play_history;
+create policy "history own"
+on public.user_play_history
+for all
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "user playlists own" on public.user_playlists;
+create policy "user playlists own"
+on public.user_playlists
+for all
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "user playlist songs own" on public.user_playlist_songs;
+create policy "user playlist songs own"
+on public.user_playlist_songs
+for all
+to authenticated
+using (
+  exists (
+    select 1 from public.user_playlists p
+    where p.id = playlist_id and p.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.user_playlists p
+    where p.id = playlist_id and p.user_id = auth.uid()
+  )
+);
 
 -- Profiles
 drop policy if exists "profiles read own" on public.profiles;

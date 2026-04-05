@@ -4,10 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Play } from "lucide-react";
 
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ResolvedImage } from "@/components/ResolvedImage";
 import { StreamingButtons } from "@/components/StreamingButtons";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { getAlbum, listAlbumSongs, listAlbumStreamingLinks } from "@/services/music/albums";
+import { usePlayer } from "@/store/player/PlayerProvider";
 
 function formatDuration(seconds: number | null) {
   if (!seconds) return "—";
@@ -19,6 +22,7 @@ function formatDuration(seconds: number | null) {
 export default function AlbumPage() {
   const { albumId } = useParams();
   if (!albumId) return null;
+  const player = usePlayer();
 
   const albumQuery = useQuery({ queryKey: ["album", albumId], queryFn: () => getAlbum(albumId) });
   const songsQuery = useQuery({
@@ -83,6 +87,9 @@ export default function AlbumPage() {
           <div className="mt-5">
             <StreamingButtons links={links} />
           </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <FavoriteButton entityType="albums" entityId={album.id} />
+          </div>
         </div>
       </div>
 
@@ -106,7 +113,19 @@ export default function AlbumPage() {
                     <div className="mt-0.5 text-xs text-[rgb(var(--muted))]">{formatDuration(s.duration)}</div>
                   </div>
                   <span className="grid h-9 w-9 place-items-center rounded-xl border border-[rgb(var(--border))]">
-                    <Play className="h-4 w-4" />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        player.playSongId(s.id);
+                      }}
+                      disabled={!s.preview_url}
+                      aria-label="Play preview"
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
                   </span>
                 </Card>
               </Link>
