@@ -26,7 +26,9 @@ export async function searchAll(qRaw: string, limit = 8): Promise<SearchResults>
       .limit(limit),
     supabase
       .from("albums")
-      .select("id,title,cover_image,artist:artists(id,name),album_artists(artist:artists(id,name))")
+      .select(
+        "id,title,cover_image,artist:artists!albums_artist_id_fkey(id,name),album_artists(artist:artists!album_artists_artist_id_fkey(id,name))",
+      )
       .ilike("title", `%${q}%`)
       .limit(limit),
     supabase.from("artists").select("id,name,profile_image").ilike("name", `%${q}%`).limit(limit),

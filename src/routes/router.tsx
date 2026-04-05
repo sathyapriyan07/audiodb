@@ -38,6 +38,7 @@ const AdminSectionsPage = React.lazy(() => import("@/pages/admin/sections/AdminS
 const AdminSectionEditorPage = React.lazy(
   () => import("@/pages/admin/sections/AdminSectionEditorPage"),
 );
+const DeezerImportPage = React.lazy(() => import("@/pages/admin/import/DeezerImportPage"));
 
 export const router = createBrowserRouter([
   {
@@ -148,6 +149,7 @@ export const router = createBrowserRouter([
           { path: "sections", element: <React.Suspense><AdminSectionsPage /></React.Suspense> },
           { path: "sections/new", element: <React.Suspense><AdminSectionEditorPage /></React.Suspense> },
           { path: "sections/:sectionId", element: <React.Suspense><AdminSectionEditorPage /></React.Suspense> },
+          { path: "import/deezer", element: <React.Suspense><DeezerImportPage /></React.Suspense> },
           { path: "*", element: <Navigate to="/admin" replace /> },
         ],
       },

@@ -19,7 +19,7 @@ export async function listAlbums(params?: { q?: string; limit?: number; offset?:
   let query = supabase
     .from("albums")
     .select(
-      "id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists(id,name),album_artists(album_id,artist_id,role,order,artist:artists(id,name))",
+      "id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists!albums_artist_id_fkey(id,name),album_artists(album_id,artist_id,role,order,artist:artists!album_artists_artist_id_fkey(id,name))",
     )
     .order("release_date", { ascending: false });
   if (q) query = query.ilike("title", `%${q}%`);
@@ -37,7 +37,7 @@ export async function getAlbum(albumId: string) {
   const { data, error } = await supabase
     .from("albums")
     .select(
-      "id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists(id,name,profile_image),album_artists(album_id,artist_id,role,order,artist:artists(id,name,profile_image))",
+      "id,title,artist_id,cover_image,release_date,created_at,updated_at,artist:artists!albums_artist_id_fkey(id,name,profile_image),album_artists(album_id,artist_id,role,order,artist:artists!album_artists_artist_id_fkey(id,name,profile_image))",
     )
     .eq("id", albumId)
     .single();
@@ -73,7 +73,7 @@ export async function deleteAlbum(albumId: string) {
 export async function listAlbumArtists(albumId: string) {
   const { data, error } = await supabase
     .from("album_artists")
-    .select("artist_id,role,order,artist:artists(id,name,profile_image)")
+    .select("artist_id,role,order,artist:artists!album_artists_artist_id_fkey(id,name,profile_image)")
     .eq("album_id", albumId)
     .order("order", { ascending: true });
   if (error) throw error;

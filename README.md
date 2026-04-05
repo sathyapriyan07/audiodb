@@ -33,6 +33,12 @@ npm run build
 npm run preview
 ```
 
+## Deezer import (Admin)
+
+- Open `/admin/import/deezer`
+- Search Deezer, preview, optionally edit titles/cover URL, then import
+- Dedupe is handled via `public.external_entity_links` (created in `supabase/schema.sql`)
+
 ## If you see: “must be owner of table objects”
 
 Some environments don’t allow altering `storage.objects` from your current SQL role.

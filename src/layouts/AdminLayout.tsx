@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { Album, Compass, Home, LayoutGrid, ListMusic, LogOut, Mic2, Radio, Settings2 } from "lucide-react";
+import { Album, Compass, Download, Home, LayoutGrid, ListMusic, LogOut, Mic2, Radio, Settings2 } from "lucide-react";
 
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
@@ -13,6 +13,7 @@ const nav = [
   { to: "/admin/playlists", label: "Playlists", icon: ListMusic },
   { to: "/admin/sections", label: "Sections", icon: LayoutGrid },
   { to: "/admin/platforms", label: "Platforms", icon: Settings2 },
+  { to: "/admin/import/deezer", label: "Deezer import", icon: Download },
 ];
 
 export function AdminLayout() {

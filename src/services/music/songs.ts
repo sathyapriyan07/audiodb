@@ -43,7 +43,7 @@ export async function getSong(songId: string) {
   const { data, error } = await supabase
     .from("songs")
     .select(
-      "id,title,duration,release_date,album_id,cover_image,created_at,updated_at,album:albums(id,title,cover_image,release_date,artist:artists(id,name,profile_image))",
+      "id,title,duration,release_date,album_id,cover_image,created_at,updated_at,album:albums(id,title,cover_image,release_date,artist:artists!albums_artist_id_fkey(id,name,profile_image))",
     )
     .eq("id", songId)
     .single();
@@ -106,6 +106,13 @@ export async function setSongStreamingLinks(
   const { error } = await supabase.from("song_streaming_links").insert(
     links.map((l) => ({ ...l, song_id: songId })),
   );
+  if (error) throw error;
+}
+
+export async function upsertSongStreamingLink(songId: string, link: { platform_id: string; url: string }) {
+  const { error } = await supabase
+    .from("song_streaming_links")
+    .upsert({ song_id: songId, platform_id: link.platform_id, url: link.url }, { onConflict: "song_id,platform_id" });
   if (error) throw error;
 }
 

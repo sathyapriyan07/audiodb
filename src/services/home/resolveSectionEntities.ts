@@ -10,7 +10,7 @@ async function fetchByType(entityType: EntityType, ids: string[]) {
   if (entityType === "songs") {
     const { data, error } = await supabase
       .from("songs")
-      .select("id,title,cover_image,album:albums(id,title,artist:artists(id,name))")
+      .select("id,title,cover_image,album:albums(id,title,artist:artists!albums_artist_id_fkey(id,name))")
       .in("id", ids);
     if (error) throw error;
     return Object.fromEntries((data ?? []).map((r: any) => [r.id, r]));

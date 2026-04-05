@@ -55,12 +55,14 @@ export async function deleteArtist(artistId: string) {
 
 export async function listArtistAlbums(artistId: string) {
   const { data, error } = await supabase
-    .from("albums")
-    .select("id,title,cover_image,release_date")
+    .from("album_artists")
+    .select("album:albums(id,title,cover_image,release_date)")
     .eq("artist_id", artistId)
-    .order("release_date", { ascending: false });
+    .order("order", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as Array<{ id: string; title: string; cover_image: ImageRef | null; release_date: string | null }>;
+  return (data ?? [])
+    .map((r: any) => r.album)
+    .filter(Boolean) as Array<{ id: string; title: string; cover_image: ImageRef | null; release_date: string | null }>;
 }
 
 export async function listArtistTopSongs(artistId: string, limit = 10) {

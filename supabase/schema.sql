@@ -238,6 +238,20 @@ create table if not exists public.home_section_items (
 create unique index if not exists home_section_items_order_unique on public.home_section_items (section_id, sort_order);
 create unique index if not exists home_section_items_entity_unique on public.home_section_items (section_id, entity_type, entity_id);
 
+-- External IDs (dedupe + re-import safety)
+create table if not exists public.external_entity_links (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  entity_type public.entity_type not null,
+  external_id text not null,
+  local_id uuid not null,
+  created_at timestamptz not null default now(),
+  constraint external_entity_links_provider_chk check (provider in ('deezer')),
+  constraint external_entity_links_unique unique (provider, entity_type, external_id)
+);
+
+create index if not exists external_entity_links_local_id_idx on public.external_entity_links (local_id);
+
 -- RLS
 alter table public.profiles enable row level security;
 alter table public.artists enable row level security;
@@ -246,11 +260,13 @@ alter table public.songs enable row level security;
 alter table public.playlists enable row level security;
 alter table public.platforms enable row level security;
 alter table public.song_artists enable row level security;
+alter table public.album_artists enable row level security;
 alter table public.song_streaming_links enable row level security;
 alter table public.album_streaming_links enable row level security;
 alter table public.playlist_songs enable row level security;
 alter table public.home_sections enable row level security;
 alter table public.home_section_items enable row level security;
+alter table public.external_entity_links enable row level security;
 
 -- Profiles
 drop policy if exists "profiles read own" on public.profiles;
@@ -276,7 +292,7 @@ begin
   foreach t in array array[
     'artists','albums','songs','playlists','platforms',
     'song_artists','album_artists','song_streaming_links','album_streaming_links','playlist_songs',
-    'home_sections','home_section_items'
+    'home_sections','home_section_items','external_entity_links'
   ]
   loop
     execute format('drop policy if exists "public read" on public.%I;', t);
