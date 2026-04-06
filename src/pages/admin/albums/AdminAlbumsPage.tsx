@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { BulkCreateModal } from "@/components/admin/BulkCreateModal";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -16,6 +17,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 export default function AdminAlbumsPage() {
   const [q, setQ] = React.useState("");
   const dq = useDebouncedValue(q, 200);
+  const [bulkOpen, setBulkOpen] = React.useState(false);
 
   const list = useQuery({
     queryKey: ["albums", dq],
@@ -29,7 +31,16 @@ export default function AdminAlbumsPage() {
 
   return (
     <div>
-      <AdminHeader title="Albums" actionHref="/admin/albums/new" actionLabel="New album" />
+      <AdminHeader
+        title="Albums"
+        actionHref="/admin/albums/new"
+        actionLabel="New album"
+        actions={
+          <Button variant="secondary" onClick={() => setBulkOpen(true)}>
+            Bulk create
+          </Button>
+        }
+      />
 
       <div className="mb-4 max-w-md">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search albums…" />
@@ -77,7 +88,13 @@ export default function AdminAlbumsPage() {
           </div>
         </Card>
       )}
+
+      <BulkCreateModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        entity="albums"
+        invalidateKeys={[["albums"], ["artists"]]}
+      />
     </div>
   );
 }
-

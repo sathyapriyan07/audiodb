@@ -1,8 +1,10 @@
+import React from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { BulkCreateModal } from "@/components/admin/BulkCreateModal";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -11,6 +13,7 @@ import { deleteHomeSection, listHomeSections } from "@/services/home/sections";
 import { toErrorMessage } from "@/services/db/errors";
 
 export default function AdminSectionsPage() {
+  const [bulkOpen, setBulkOpen] = React.useState(false);
   const q = useQuery({ queryKey: ["homeSections"], queryFn: listHomeSections });
   const del = useMutation({
     mutationFn: (id: string) => deleteHomeSection(id),
@@ -24,6 +27,11 @@ export default function AdminSectionsPage() {
         subtitle="Curate the rows shown on the Home page."
         actionHref="/admin/sections/new"
         actionLabel="New section"
+        actions={
+          <Button variant="secondary" onClick={() => setBulkOpen(true)}>
+            Bulk create
+          </Button>
+        }
       />
 
       {q.isLoading ? (
@@ -70,6 +78,13 @@ export default function AdminSectionsPage() {
           </div>
         </Card>
       )}
+
+      <BulkCreateModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        entity="sections"
+        invalidateKeys={[["homeSections"]]}
+      />
     </div>
   );
 }
