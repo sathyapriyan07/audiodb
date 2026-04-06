@@ -48,6 +48,9 @@ npm run preview
 - Open `/admin/import/deezer`
 - Search Deezer, preview, optionally edit titles/cover URL, then import
 - Dedupe is handled via `public.external_entity_links` (created in `supabase/schema.sql`)
+- Production note: if your Vercel project is deployed as static-only and `/api/deezer/*` returns HTML,
+  deploy the Supabase Edge Function proxy `deezer-proxy` from `supabase/functions/deezer-proxy/index.ts`
+  and the app will automatically fall back to it.
 
 ## If you see: “must be owner of table objects”
 

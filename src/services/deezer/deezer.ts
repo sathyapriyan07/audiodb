@@ -41,12 +41,22 @@ export type DeezerArtist = z.infer<typeof DeezerArtistSchema>;
 export type DeezerAlbum = z.infer<typeof DeezerAlbumSchema>;
 export type DeezerTrack = z.infer<typeof DeezerTrackSchema>;
 
-async function deezerGet<T>(path: string, params?: Record<string, string>) {
-  const url = new URL(`/api/deezer/${path.replace(/^\/+/, "")}`, window.location.origin);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+function getSupabaseFunctionsBaseUrl() {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (!supabaseUrl) return null;
+  try {
+    const u = new URL(supabaseUrl);
+    // https://<ref>.supabase.co -> https://<ref>.functions.supabase.co
+    u.hostname = u.hostname.replace(".supabase.co", ".functions.supabase.co");
+    u.pathname = "";
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return null;
   }
-  const res = await fetch(url.toString(), { method: "GET" });
+}
+
+async function fetchJsonWithContentTypeCheck(url: string) {
+  const res = await fetch(url, { method: "GET" });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Deezer API error (${res.status}): ${text || res.statusText}`);
@@ -54,11 +64,50 @@ async function deezerGet<T>(path: string, params?: Record<string, string>) {
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
     const text = await res.text().catch(() => "");
-    throw new Error(
-      `Deezer proxy returned non-JSON (content-type: ${contentType}). Redeploy Vercel so /api/deezer routes to the serverless function. Body: ${text.slice(0, 120)}`,
-    );
+    throw new Error(`Non-JSON response (content-type: ${contentType}): ${text.slice(0, 120)}`);
   }
-  return (await res.json()) as T;
+  return (await res.json()) as unknown;
+}
+
+async function deezerGet<T>(path: string, params?: Record<string, string>) {
+  const relPath = path.replace(/^\/+/, "");
+  const url = new URL(`/api/deezer/${relPath}`, window.location.origin);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  }
+  try {
+    return (await fetchJsonWithContentTypeCheck(url.toString())) as T;
+  } catch (e) {
+    // Production fallback: if Vercel isn't deploying /api/* serverless functions,
+    // use a Supabase Edge Function proxy instead.
+    const fnBase = getSupabaseFunctionsBaseUrl();
+    if (!fnBase) throw e;
+
+    const fnUrl = new URL(`${fnBase}/deezer-proxy/${relPath}`);
+    if (params) for (const [k, v] of Object.entries(params)) fnUrl.searchParams.set(k, v);
+
+    const res = await fetch(fnUrl.toString(), {
+      method: "GET",
+      headers: {
+        // Works whether verify_jwt is on or off (public key is okay to send).
+        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `Deezer proxy failed (Supabase Edge Function). Deploy 'deezer-proxy' in Supabase. (${res.status}): ${text || res.statusText}`,
+      );
+    }
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Deezer proxy (Supabase) returned non-JSON: ${text.slice(0, 120)}`);
+    }
+    return (await res.json()) as T;
+  }
 }
 
 export async function searchDeezerTracks(q: string) {
