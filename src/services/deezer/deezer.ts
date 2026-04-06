@@ -86,19 +86,24 @@ async function deezerGet<T>(path: string, params?: Record<string, string>) {
     const fnUrl = new URL(`${fnBase}/deezer-proxy/${relPath}`);
     if (params) for (const [k, v] of Object.entries(params)) fnUrl.searchParams.set(k, v);
 
-    const res = await fetch(fnUrl.toString(), {
-      method: "GET",
-      headers: {
-        // Works whether verify_jwt is on or off (public key is okay to send).
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        Accept: "application/json",
-      },
-    });
+    // Prefer a simple GET (no custom headers) to avoid browser preflight/CORS issues.
+    // This requires the Edge Function to be deployed with `--no-verify-jwt`.
+    let res = await fetch(fnUrl.toString(), { method: "GET", headers: { Accept: "application/json" } });
+    if (res.status === 401 || res.status === 403) {
+      // Fallback: try with Supabase headers (may trigger preflight).
+      res = await fetch(fnUrl.toString(), {
+        method: "GET",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          Accept: "application/json",
+        },
+      });
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(
-        `Deezer proxy failed (Supabase Edge Function). Deploy 'deezer-proxy' in Supabase. (${res.status}): ${text || res.statusText}`,
+        `Deezer proxy failed (Supabase Edge Function). Deploy with \`supabase functions deploy deezer-proxy --no-verify-jwt\`. (${res.status}): ${text || res.statusText}`,
       );
     }
     const contentType = res.headers.get("content-type") ?? "";
